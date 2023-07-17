@@ -1,0 +1,131 @@
+---
+title: "Community Dreams Foundation- Maggie Chien"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+## Load Libraries 
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(janitor)
+library(skimr)
+library(kableExtra)
+library(GGally)
+library(vip)
+library(fastshap)   
+library(MASS)
+library(ISLR)
+library(tree)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(imputeTS)
+library(forecast)
+library(urca)
+library(pracma)
+library(astsa)
+library(fpp2)
+
+```
+
+
+## Load Data
+
+# Import your data with read_csv()
+
+```{r}
+orlando <- read_csv("C:\\Users\\maggi\\Desktop\\CDF\\Orlando permits.csv") %>%
+  clean_names()
+
+missing <- is.na(orlando$issue_date)
+
+orlando1 <- subset(orlando, subset= !missing)
+
+
+head(orlando1) 
+```
+
+## Create a time series object for the data
+
+```{r,warning=FALSE}
+
+# Create time series object and plot time series
+
+orlando_month <- orlando1 %>%
+  group_by(year, month) %>%
+  summarize(sum_value = sum(est_value))
+
+head(orlando_month)
+
+orlando_month <- subset(orlando_month, select=c(sum_value))
+head(orlando_month)
+
+orlando_ts <- ts(orlando_month, start=c(2013,1), frequency = 12)
+plot(orlando_ts)
+
+
+```
+
+
+## Compute the Ljung Box Test for White Noise
+
+# Plot ACF and PACF 
+```{r}
+
+# test the series for white noise
+
+Box.test(orlando_ts, lag=6, fitdf=0, type="Lj")
+
+ggAcf(orlando_ts)
+ggPacf(orlando_ts)
+
+```
+
+# ADF test for stationarity
+# Use the Single Mean Version of the Test
+
+```{r}
+
+orlando_df <- ur.df(orlando_ts, type = "drift")
+summary(orlando_df)
+
+```
+
+
+# Model 1 (4,1,1)
+```{r}
+
+fit2_AR1 <- sarima(orlando_ts, 4, 1, 1)
+summary(fit2_AR1)
+fit2_AR1
+
+fit22_AR1 <- arima(orlando_ts, order=c(4,1,1))
+summary(fit22_AR1)
+checkresiduals(fit22_AR1)
+
+forecast(fit22_AR1, h=24)
+
+fit22_AR1 %>% forecast() %>% autoplot()
+
+```
+
+
+# Model 2: auto.arima
+
+```{r}
+
+fitauto <- auto.arima(orlando_ts)
+summary(fitauto)
+checkresiduals(fitauto)
+
+fit_auto <- sarima(orlando_ts, 4, 1, 1)
+summary(fit_auto)
+fit_auto
+
+```
+
+
